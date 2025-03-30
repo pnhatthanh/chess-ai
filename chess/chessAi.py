@@ -92,15 +92,32 @@ def findBestMove(gs, validMoves, returnQueue):
     findMoveMinimaxAlphaBeta(gs, validMoves, DEPTH, -CHECKMATE, CHECKMATE, maximizingPlayer)
 
     returnQueue.put(nextMove)
+def orderMoves(gs, moves):
+    moveScores = []
+    for move in moves:
+        score = 0
+        if move.isCapture:
+            capturedPiece = gs.board[move.endRow][move.endCol]
+            score += pieceScore.get(capturedPiece[1], 0) * 10  
+        if move in killerMoves.get(gs.MoveCount, []):
+            score += 3  
+        moveScores.append((score, move))
+    
+    moveScores.sort(reverse=True, key=lambda x: x[0])
+    return [move for _, move in moveScores]
+
+killerMoves = {}  # Lưu các nước đi mạnh
 
 def findMoveMinimaxAlphaBeta(gs, validMoves, depth, alpha, beta, maximizingPlayer):
     global nextMove
     if depth == 0:
         return scoreBoard(gs)
-
+    
+    orderedMoves = orderMoves(gs, validMoves)  # Sắp xếp nước đi trước khi duyệt
+    
     if maximizingPlayer:
         maxEval = -CHECKMATE
-        for move in validMoves:
+        for move in orderedMoves:
             gs.makeMove(move)
             nextMoves = gs.getValidMoves()
             eval = findMoveMinimaxAlphaBeta(gs, nextMoves, depth - 1, alpha, beta, False)
@@ -109,13 +126,14 @@ def findMoveMinimaxAlphaBeta(gs, validMoves, depth, alpha, beta, maximizingPlaye
                 maxEval = eval
                 if depth == DEPTH:
                     nextMove = move
+                    killerMoves[gs.MoveCount] = [move]  # Lưu move mạnh
             alpha = max(alpha, eval)
             if beta <= alpha:
-                break  # Cắt tỉa beta
+                break 
         return maxEval
     else:
         minEval = CHECKMATE
-        for move in validMoves:
+        for move in orderedMoves:
             gs.makeMove(move)
             nextMoves = gs.getValidMoves()
             eval = findMoveMinimaxAlphaBeta(gs, nextMoves, depth - 1, alpha, beta, True)
@@ -124,12 +142,37 @@ def findMoveMinimaxAlphaBeta(gs, validMoves, depth, alpha, beta, maximizingPlaye
                 minEval = eval
                 if depth == DEPTH:
                     nextMove = move
+                    killerMoves[gs.MoveCount] = [move]  # Lưu move mạnh
             beta = min(beta, eval)
             if beta <= alpha:
-                break  # Cắt tỉa alpha
+                break
         return minEval
 
 
+def scoreBoard(gs):
+    if gs.checkmate:
+        return CHECKMATE if not gs.whiteToMove else -CHECKMATE
+    if gs.stalemate:
+        return STALEMATE
+
+    score = 0
+    for row in range(8):
+        for col in range(8):
+            square = gs.board[row][col]
+            if square == "--":
+                continue
+            pieceType = square[1]
+            pieceColor = square[0]
+
+            piecePositionScore = 0 if pieceType == "K" else piecePositionScores.get(square, [[0] * 8] * 8)[row][col]
+
+            pieceValue = pieceScore.get(pieceType, 0) + piecePositionScore * 0.1
+
+            if SET_WHITE_AS_BOT:
+                score += pieceValue if pieceColor == 'w' else -pieceValue
+            else:
+                score -= pieceValue if pieceColor == 'w' else -pieceValue
+    return score
 '''
 Positive score is good for white
 Negative score is good for black
@@ -176,28 +219,3 @@ Negative score is good for black
 
 #     return score
 
-def scoreBoard(gs):
-    if gs.checkmate:
-        return CHECKMATE if not gs.whiteToMove else -CHECKMATE
-    if gs.stalemate:
-        return STALEMATE
-
-    score = 0
-    for row in range(8):
-        for col in range(8):
-            square = gs.board[row][col]
-            if square == "--":
-                continue
-            pieceType = square[1]
-            pieceColor = square[0]
-
-            piecePositionScore = 0 if pieceType == "K" else piecePositionScores.get(square, [[0] * 8] * 8)[row][col]
-
-            pieceValue = pieceScore.get(pieceType, 0) + piecePositionScore * 0.1
-
-            if SET_WHITE_AS_BOT:
-                score += pieceValue if pieceColor == 'w' else -pieceValue
-            else:
-                score -= pieceValue if pieceColor == 'w' else -pieceValue
-
-    return score

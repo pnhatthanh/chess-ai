@@ -173,6 +173,7 @@ def main():
     # clicking to own piece and location where to move[(6,6),(4,4)]
     playerClicks = []
     gameOver = False  # gameover if checkmate or stalemate
+    surrendered=False
     playerWhiteHuman = not SET_WHITE_AS_BOT
     playerBlackHuman = not SET_BLACK_AS_BOT
     AIThinking = False  # True if ai is thinking
@@ -191,7 +192,7 @@ def main():
                 running = False
             # Mouse Handler
             elif e.type == p.MOUSEBUTTONDOWN:
-                if not gameOver:  # allow mouse handling only if its not game over
+                if not gameOver and not surrendered:  # allow mouse handling only if its not game over
                     location = p.mouse.get_pos()
                     col = location[0]//SQ_SIZE
                     row = location[1]//SQ_SIZE
@@ -261,13 +262,18 @@ def main():
                     moveMade = False
                     animate = False
                     gameOver = False
+                    surrendered=False
                     if AIThinking:
                         moveFinderProcess.terminate()  # terminate the ai thinking if we undo
                         AIThinking = False
                     moveUndone = True
+                if e.key == p.K_s:  # đầu hàng khi nhấn 's'
+                    surrendered = True
+                    print("Player has surrendered!")
+
 
         # AI move finder
-        if not gameOver and not humanTurn and not moveUndone:
+        if not gameOver and not surrendered and not humanTurn and not moveUndone:
             if not AIThinking:
                 AIThinking = True
                 returnQueue = Queue()  # keep track of data, to pass data between threads
@@ -291,8 +297,7 @@ def main():
                     # Show pawn promotion popup and get the selected piece
                     promotion_choice = pawnPromotionPopup(screen, gs)
                     # Set the promoted piece on the board
-                    gs.board[AIMove.endRow][AIMove.endCol] = AIMove.pieceMoved[0] + \
-                        promotion_choice
+                    gs.board[AIMove.endRow][AIMove.endCol] = AIMove.pieceMoved[0] + promotion_choice
                     promote_sound.play()
                     pieceCaptured = False
 
@@ -337,10 +342,14 @@ def main():
 
         drawGameState(screen, gs, validMoves, squareSelected, moveLogFont)
 
-        if COUNT_DRAW == 1:
+        if COUNT_DRAW == 3:
             gameOver = True
             text = 'Draw due to repetition'
             drawEndGameText(screen, text)
+        if surrendered:
+            font = p.font.SysFont("Arial", 50, True, False)
+            textSurface = font.render("Surrendered!", True, p.Color("red"))
+            screen.blit(textSurface, (BOARD_WIDTH//3, BOARD_HEIGHT//3))
         if gs.stalemate:
             gameOver = True
             text = 'Stalemate'
@@ -358,7 +367,7 @@ def drawGameState(screen, gs, validMoves, squareSelected, moveLogFont):
     drawSquare(screen)  # draw square on board
     highlightSquares(screen, gs, validMoves, squareSelected)
     drawPieces(screen, gs.board)
-    drawMoveLog(screen, gs, moveLogFont)
+    ##drawMoveLog(screen, gs, moveLogFont)
 
 
 def drawSquare(screen):

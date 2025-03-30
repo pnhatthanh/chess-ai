@@ -27,6 +27,8 @@ class GameState():
             ['--', '--', '--', '--', '--', '--', '--', '--'],
             ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
             ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR']]
+        
+        self.MoveCount = 0 
 
         self.moveFunctions = {'p': self.getPawnMoves, 'R': self.getRookMoves, 'N': self.getKnightMoves,
                               'B': self.getBishopMoves, 'Q': self.getQueenMoves, 'K': self.getKingMoves}
@@ -65,6 +67,7 @@ class GameState():
         self.moveLog.append(move)
         # swap player
         self.whiteToMove = not self.whiteToMove
+        self.MoveCount += 1 
 
         # update king's location if moved
         if move.pieceMoved == 'wK':
@@ -125,6 +128,7 @@ class GameState():
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.whiteToMove = not self.whiteToMove  # swap player
+            self.MoveCount += 1 
 
             # undo updated king's location
             if move.pieceMoved == 'wK':
